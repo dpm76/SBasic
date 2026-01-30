@@ -10,6 +10,7 @@ class BasicInterpreter:
         self.str_variables = {}
         self._expr_interpreter = ExpressionInterpreter(self.num_variables, self.str_variables)
         self._stop = False
+        self._return_stack = []
         
     def load(self, stream):
         """
@@ -41,6 +42,8 @@ class BasicInterpreter:
     def run(self, line=0):
         self.pc = 0 if line == 0 else self.line_index[line]
         self._stop = False
+        self._return_stack = []
+
         try:
             while not self._stop and self.pc < len(self.program):
                 line_number, _, code = self.program[self.pc]
@@ -86,6 +89,12 @@ class BasicInterpreter:
         elif code_upper.startswith("STOP"):
             self.execute_stop(code)
 
+        elif code_upper.startswith("GO SUB") or code_upper.startswith("GOSUB"):
+            self.execute_gosub(code)
+
+        elif code_upper.startswith("RETURN"):
+            self.execute_return(code)
+
         else:
             raise RuntimeError(f"Unknown keyword: {code}")
 
@@ -109,7 +118,7 @@ class BasicInterpreter:
 
     def execute_goto(self, code):
         # GO TO 10
-        parts = code.upper().split()
+        parts = code.split()
         target_line = int(parts[-1])
 
         if target_line not in self.line_index:
@@ -196,5 +205,12 @@ class BasicInterpreter:
 
     def execute_stop(self, code):
         self._stop = True
-    
-    
+
+    def execute_gosub(self, code):
+        self._return_stack.append(self.pc)
+        parts = code.split()
+        target_line = int(parts[-1])
+        self.pc = self.line_index[target_line] - 1
+
+    def execute_return(self, code):
+        self.pc = self._return_stack.pop()

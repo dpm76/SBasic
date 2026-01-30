@@ -89,12 +89,13 @@ The interpreter implements a **small but functional subset of BASIC**.
 
 - `PRINT`
 - `GOTO` / `GO TO`
+- `GOSUB` / `GO SUB` - `RETURN`
 - `LET`
   - numeric variable assignment
   - string variable assignment
-- `IF - THEN`
+- `IF ... THEN`
 - `INPUT`
-- `FOR` / `NEXT`
+- `FOR` - `NEXT`
 - `STOP`
 - `REM`
 
