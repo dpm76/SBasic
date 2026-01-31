@@ -98,6 +98,7 @@ The interpreter implements a **small but functional subset of BASIC**.
 - `FOR` - `NEXT`
 - `STOP`
 - `REM`
+- `DATA`, `READ`, `RESTORE`
 
 ### Expression Evaluation
 

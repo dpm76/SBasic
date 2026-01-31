@@ -11,6 +11,9 @@ class BasicInterpreter:
         self._expr_interpreter = ExpressionInterpreter(self.num_variables, self.str_variables)
         self._stop = False
         self._return_stack = []
+        self._data_buffer = []
+        self._data_buffer_index = 0
+        self._restore_line_index = {}
         
     def load(self, stream):
         """
@@ -18,18 +21,25 @@ class BasicInterpreter:
         """
         self.program = []
         self.line_index = {}
+        self._data_buffer = []
+        self._data_buffer_index = 0
         
         for raw_line in stream:
             raw_line = raw_line.strip()
             if not raw_line:
                 continue
 
-            number, code = raw_line.split(" ", 1)
+            number_str, code = raw_line.split(" ", 1)
             code_parts = re_split(r':(?=(?:[^"]*"[^"]*")*[^"]*$)', code)
             part_index = 0
+            number = int(number_str)
             for code_part in code_parts:
-                self.program.append((int(number), part_index, code_part.strip()))
-                part_index += 1
+                code_part = code_part.strip()
+                if code_part.startswith("DATA"):
+                    self.execute_data(number, code_part)
+                else:
+                    self.program.append((number, part_index, code_part))                
+                    part_index += 1
 
         # ordenar por número de línea
         self.program.sort(key=lambda x: (x[0], x[1]))
@@ -39,10 +49,14 @@ class BasicInterpreter:
             if not line_number in self.line_index:
                 self.line_index[line_number] = idx
 
+        print(self._data_buffer)
+        print(self._restore_line_index)
+
     def run(self, line=0):
         self.pc = 0 if line == 0 else self.line_index[line]
         self._stop = False
         self._return_stack = []
+        self._data_buffer_index = 0
 
         try:
             while not self._stop and self.pc < len(self.program):
@@ -95,6 +109,12 @@ class BasicInterpreter:
         elif code_upper.startswith("RETURN"):
             self.execute_return(code)
 
+        elif code_upper.startswith("READ"):
+            self.execute_read(code)
+
+        elif code_upper.startswith("RESTORE"):
+            self.execute_restore(code)
+
         else:
             raise RuntimeError(f"Unknown keyword: {code}")
 
@@ -128,23 +148,24 @@ class BasicInterpreter:
         self.pc = self.line_index[target_line] - 1
 
     def execute_let(self, code):
-        # LET A$ = "HOLA"
         _, rest = code.split(" ", 1)
         var, expr = rest.split("=", 1)
 
         var = var.strip()
         expr = expr.strip()
+        
+        self._assignVariable(var, expr)
 
-        value = self._expr_interpreter.evaluate(expr)
-
-        if var.endswith("$"):
+    def _assignVariable(self, var_name, expression_value):
+        value = self._expr_interpreter.evaluate(expression_value)
+        if var_name.endswith("$"):
             if not isinstance(value, str):
-                raise RuntimeError("Type mismatch")
-            self.str_variables[var] = value
+                raise RuntimeError("Type mismatch. A string was expected.")
+            self.str_variables[var_name] = value
         else:
             if not isinstance(value, (int, float)):
-                raise RuntimeError("Type mismatch")
-            self.num_variables[var] = value
+                raise RuntimeError("Type mismatch. A number was expected.")
+            self.num_variables[var_name] = value
 
     def execute_if(self, code):
 
@@ -214,3 +235,28 @@ class BasicInterpreter:
 
     def execute_return(self, code):
         self.pc = self._return_stack.pop()
+
+    def execute_data(self, line_number, code):
+        if not line_number in self._restore_line_index:
+            self._restore_line_index[line_number] = len(self._data_buffer)
+
+        _, row_data = code.split(" ", 1)        
+        for data_element in row_data.split(","):
+            data_element = data_element.strip()
+            self._data_buffer.append(data_element)
+
+    def execute_read(self, code):
+        _, params = code.split(" ", 1)
+        var_names = params.split(",")
+        for var_name in var_names:
+            if self._data_buffer_index == len(self._data_buffer):
+                raise RuntimeError("End of data")
+            var_name = var_name.strip()            
+            value = self._data_buffer[self._data_buffer_index]
+            self._assignVariable(var_name, value)
+            self._data_buffer_index += 1
+
+    def execute_restore(self, code):
+        items = code.split(" ")        
+        self._data_buffer_index = self._restore_line_index[int(items[-1])] if len(items) > 1 else 0
+        
