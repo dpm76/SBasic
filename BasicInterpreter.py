@@ -119,6 +119,10 @@ class BasicInterpreter:
             raise RuntimeError(f"Unknown keyword: {code}")
 
     def execute_print(self, code):
+        if code == "PRINT":
+            print()
+            return
+
         _, rest = code.split(" ", 1)
         rest = rest.strip()
         args = re_split(r';(?=(?:[^"]*"[^"]*")*[^"]*$)', rest)
