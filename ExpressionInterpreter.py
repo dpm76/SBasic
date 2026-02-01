@@ -11,10 +11,10 @@ class ExpressionInterpreter:
             numeric_vars: Diccionario con variables numéricas {nombre: valor}
             string_vars: Diccionario con variables de texto {nombre$: valor}
         """
-        self.numeric_vars = numeric_vars if numeric_vars is not None else {}
-        self.string_vars = string_vars if string_vars is not None else {}
+        self._numeric_vars = numeric_vars if numeric_vars is not None else {}
+        self._string_vars = string_vars if string_vars is not None else {}
         
-        self.operators = {
+        self._operators = {
             '^': {'precedence': 2, 'func': lambda a, b: a ** b},
             '+': {'precedence': 1, 'func': lambda a, b: a + b},
             '-': {'precedence': 1, 'func': lambda a, b: a - b},
@@ -30,7 +30,7 @@ class ExpressionInterpreter:
             '<>': {'precedence': 0, 'func': lambda a, b: a != b},
         }
     
-    def tokenize(self, expr):
+    def _tokenize(self, expr):
         """Convierte la expresión en tokens"""
         expr = expr.strip()
         tokens = []
@@ -62,13 +62,13 @@ class ExpressionInterpreter:
                 
                 # Determinar si es variable de string o numérica
                 if var_name.endswith('$'):
-                    if var_name not in self.string_vars:
+                    if var_name not in self._string_vars:
                         raise ValueError(f"Variable de texto '{var_name}' no definida")
-                    tokens.append(('STRING', self.string_vars[var_name]))
+                    tokens.append(('STRING', self._string_vars[var_name]))
                 else:
-                    if var_name not in self.numeric_vars:
+                    if var_name not in self._numeric_vars:
                         raise ValueError(f"Variable numérica '{var_name}' no definida")
-                    tokens.append(('NUMBER', self.numeric_vars[var_name]))
+                    tokens.append(('NUMBER', self._numeric_vars[var_name]))
                 
                 i = j
             
@@ -138,10 +138,10 @@ class ExpressionInterpreter:
     
     def evaluate(self, expr):
         """Evalúa la expresión usando el algoritmo Shunting Yard"""
-        tokens = self.tokenize(expr)
-        return self.evaluate_tokens(tokens)
+        tokens = self._tokenize(expr)
+        return self._evaluate_tokens(tokens)
     
-    def evaluate_tokens(self, tokens):
+    def _evaluate_tokens(self, tokens):
         """Evalúa los tokens usando notación postfija (RPN)"""
         output_queue = []
         operator_stack = []
@@ -153,9 +153,9 @@ class ExpressionInterpreter:
             elif token_type == 'OPERATOR':
                 while (operator_stack and 
                        operator_stack[-1] != '(' and
-                       self.operators[operator_stack[-1]]['precedence'] >= 
-                       self.operators[token_value]['precedence']):
-                    self.apply_operator(output_queue, operator_stack.pop())
+                       self._operators[operator_stack[-1]]['precedence'] >= 
+                       self._operators[token_value]['precedence']):
+                    self._apply_operator(output_queue, operator_stack.pop())
                 operator_stack.append(token_value)
             
             elif token_type == 'PAREN':
@@ -163,7 +163,7 @@ class ExpressionInterpreter:
                     operator_stack.append('(')
                 else:  # ')'
                     while operator_stack and operator_stack[-1] != '(':
-                        self.apply_operator(output_queue, operator_stack.pop())
+                        self._apply_operator(output_queue, operator_stack.pop())
                     if not operator_stack:
                         raise ValueError("Paréntesis desbalanceados")
                     operator_stack.pop()  # Remover '('
@@ -173,14 +173,14 @@ class ExpressionInterpreter:
             op = operator_stack.pop()
             if op == '(':
                 raise ValueError("Paréntesis desbalanceados")
-            self.apply_operator(output_queue, op)
+            self._apply_operator(output_queue, op)
         
         if len(output_queue) != 1:
             raise ValueError("Expresión inválida")
         
         return output_queue[0]
     
-    def apply_operator(self, stack, operator):
+    def _apply_operator(self, stack, operator):
         """Aplica un operador a los últimos dos elementos del stack"""
         if len(stack) < 2:
             raise ValueError("Expresión inválida")
@@ -190,7 +190,7 @@ class ExpressionInterpreter:
         
         # Operaciones con números
         if isinstance(left, (int, float)) and isinstance(right, (int, float)):
-            result = self.operators[operator]['func'](left, right)
+            result = self._operators[operator]['func'](left, right)
             stack.append(result)
         
         # Operaciones con strings

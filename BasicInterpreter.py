@@ -3,12 +3,12 @@ from re import split as re_split
 
 class BasicInterpreter:
     def __init__(self):
-        self.program = []          # [(line_number, code)]
-        self.line_index = {}       # line_number -> index in program
-        self.pc = 0                # program counter
-        self.num_variables = {}
-        self.str_variables = {}
-        self._expr_interpreter = ExpressionInterpreter(self.num_variables, self.str_variables)
+        self._program = []          # [(line_number, code)]
+        self._line_index = {}       # line_number -> index in program
+        self._pc = 0                # program counter
+        self._num_variables = {}
+        self._str_variables = {}
+        self._expr_interpreter = ExpressionInterpreter(self._num_variables, self._str_variables)
         self._stop = False
         self._return_stack = []
         self._data_buffer = []
@@ -19,8 +19,8 @@ class BasicInterpreter:
         """
         stream: iterable de líneas (archivo, lista, etc.)
         """
-        self.program = []
-        self.line_index = {}
+        self._program = []
+        self._line_index = {}
         self._data_buffer = []
         self._data_buffer_index = 0
         
@@ -38,31 +38,31 @@ class BasicInterpreter:
                 if code_part.startswith("DATA"):
                     self.execute_data(number, code_part)
                 else:
-                    self.program.append((number, part_index, code_part))                
+                    self._program.append((number, part_index, code_part))                
                     part_index += 1
 
         # ordenar por número de línea
-        self.program.sort(key=lambda x: (x[0], x[1]))
+        self._program.sort(key=lambda x: (x[0], x[1]))
 
         # crear índice rápido para GOTO
-        for idx, (line_number, _, _) in enumerate(self.program):
-            if not line_number in self.line_index:
-                self.line_index[line_number] = idx
+        for idx, (line_number, _, _) in enumerate(self._program):
+            if not line_number in self._line_index:
+                self._line_index[line_number] = idx
 
         print(self._data_buffer)
         print(self._restore_line_index)
 
     def run(self, line=0):
-        self.pc = 0 if line == 0 else self.line_index[line]
+        self._pc = 0 if line == 0 else self._line_index[line]
         self._stop = False
         self._return_stack = []
         self._data_buffer_index = 0
 
         try:
-            while not self._stop and self.pc < len(self.program):
-                line_number, _, code = self.program[self.pc]
+            while not self._stop and self._pc < len(self._program):
+                line_number, _, code = self._program[self._pc]
                 self.execute_sentence(code)
-                self.pc += 1
+                self._pc += 1
             if self._stop:
                 print("\r\nProgram stop")
             else:
@@ -145,11 +145,11 @@ class BasicInterpreter:
         parts = code.split()
         target_line = int(parts[-1])
 
-        if target_line not in self.line_index:
+        if target_line not in self._line_index:
             raise RuntimeError(f"Undefined line number {target_line}")
 
         # -1 porque el loop principal hará pc += 1
-        self.pc = self.line_index[target_line] - 1
+        self._pc = self._line_index[target_line] - 1
 
     def execute_let(self, code):
         _, rest = code.split(" ", 1)
@@ -165,11 +165,11 @@ class BasicInterpreter:
         if var_name.endswith("$"):
             if not isinstance(value, str):
                 raise RuntimeError("Type mismatch. A string was expected.")
-            self.str_variables[var_name] = value
+            self._str_variables[var_name] = value
         else:
             if not isinstance(value, (int, float)):
                 raise RuntimeError("Type mismatch. A number was expected.")
-            self.num_variables[var_name] = value
+            self._num_variables[var_name] = value
 
     def execute_if(self, code):
 
@@ -191,9 +191,9 @@ class BasicInterpreter:
             value = input("? ")
         variable = variable.strip()
         if variable.endswith("$"):
-            self.str_variables[variable] = value
+            self._str_variables[variable] = value
         else:
-            self.num_variables[variable] = float(value)
+            self._num_variables[variable] = float(value)
 
     def execute_for(self, code):
         _, rest = code.split(" ", 1)
@@ -207,23 +207,23 @@ class BasicInterpreter:
             loop_end = rest.strip()
             loop_step = "1"
 
-        self.num_variables[loop_variable] = self._expr_interpreter.evaluate(loop_init.strip())
-        self.num_variables[f"for_end_{loop_variable}"] = self._expr_interpreter.evaluate(loop_end.strip())
-        self.num_variables[f"for_step_{loop_variable}"] = self._expr_interpreter.evaluate(loop_step.strip())
-        self.num_variables[f"for_num_codeline_{loop_variable}"] = self.pc
+        self._num_variables[loop_variable] = self._expr_interpreter.evaluate(loop_init.strip())
+        self._num_variables[f"for_end_{loop_variable}"] = self._expr_interpreter.evaluate(loop_end.strip())
+        self._num_variables[f"for_step_{loop_variable}"] = self._expr_interpreter.evaluate(loop_step.strip())
+        self._num_variables[f"for_num_codeline_{loop_variable}"] = self._pc
 
-        if self.num_variables[f"for_step_{loop_variable}"] == 0:
+        if self._num_variables[f"for_step_{loop_variable}"] == 0:
             raise ValueError("FOR STEP can not be 0.")
 
     def execute_next(self, code):
 
         _, loop_variable = code.split(" ", 1)
         
-        step = self.num_variables[f"for_step_{loop_variable}"]
-        self.num_variables[loop_variable] += step
-        if (step > 0 and self.num_variables[loop_variable] <= self.num_variables[f"for_end_{loop_variable}"]) \
-            or ( step < 0 and self.num_variables[loop_variable] >= self.num_variables[f"for_end_{loop_variable}"]):
-            self.pc = self.num_variables[f"for_num_codeline_{loop_variable}"]
+        step = self._num_variables[f"for_step_{loop_variable}"]
+        self._num_variables[loop_variable] += step
+        if (step > 0 and self._num_variables[loop_variable] <= self._num_variables[f"for_end_{loop_variable}"]) \
+            or ( step < 0 and self._num_variables[loop_variable] >= self._num_variables[f"for_end_{loop_variable}"]):
+            self._pc = self._num_variables[f"for_num_codeline_{loop_variable}"]
 
     def execute_rem(self, code):
         pass #Do nothing
@@ -232,13 +232,13 @@ class BasicInterpreter:
         self._stop = True
 
     def execute_gosub(self, code):
-        self._return_stack.append(self.pc)
+        self._return_stack.append(self._pc)
         parts = code.split()
         target_line = int(parts[-1])
-        self.pc = self.line_index[target_line] - 1
+        self._pc = self._line_index[target_line] - 1
 
     def execute_return(self, code):
-        self.pc = self._return_stack.pop()
+        self._pc = self._return_stack.pop()
 
     def execute_data(self, line_number, code):
         if not line_number in self._restore_line_index:
