@@ -1,5 +1,6 @@
 from ExpressionInterpreter import ExpressionInterpreter
 from re import split as re_split
+from random import seed
 
 class BasicInterpreter:
     def __init__(self):
@@ -48,9 +49,6 @@ class BasicInterpreter:
         for idx, (line_number, _, _) in enumerate(self._program):
             if not line_number in self._line_index:
                 self._line_index[line_number] = idx
-
-        print(self._data_buffer)
-        print(self._restore_line_index)
 
     def run(self, line=0):
         self._pc = 0 if line == 0 else self._line_index[line]
@@ -114,6 +112,9 @@ class BasicInterpreter:
 
         elif code_upper.startswith("RESTORE"):
             self.execute_restore(code)
+
+        elif code_upper.startswith("RANDOMIZE"):
+            self.execute_randomize(code)
 
         else:
             raise RuntimeError(f"Unknown keyword: {code}")
@@ -263,4 +264,7 @@ class BasicInterpreter:
     def execute_restore(self, code):
         items = code.split(" ")        
         self._data_buffer_index = self._restore_line_index[int(items[-1])] if len(items) > 1 else 0
+
+    def execute_randomize(self, code):
+        seed()
         

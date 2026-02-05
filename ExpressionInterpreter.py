@@ -1,4 +1,6 @@
 import re
+from math import sqrt, cos, sin, tan, acos, asin, atan, log, floor, pi
+from random import random
 
 class _Operator:
     def __init__(self, key, precedence, nparams, func):
@@ -24,6 +26,18 @@ class ExpressionInterpreter:
         
         self._register_operators((
             _Operator('NEG', 5, 1, lambda a: -a),
+            _Operator('SQR', 5, 1, lambda a: sqrt(a)),
+            _Operator('COS', 5, 1, lambda a: cos(a)),
+            _Operator('SIN', 5, 1, lambda a: sin(a)),
+            _Operator('TAN', 5, 1, lambda a: tan(a)),
+            _Operator('ACS', 5, 1, lambda a: acos(a)),
+            _Operator('ASN', 5, 1, lambda a: asin(a)),
+            _Operator('ATN', 5, 1, lambda a: atan(a)),
+            _Operator('LN', 5, 1, lambda a: log(a)),
+            _Operator('INT', 5, 1, lambda a: floor(a)),
+            _Operator('ABS', 5, 1, lambda a: abs(a)),
+            _Operator('RND', 5, 0, lambda: random()),
+            _Operator('PI', 5, 0, lambda: pi),
             _Operator('^', 4, 2, lambda a, b: a ** b),
             _Operator('*', 4, 2, lambda a, b: a * b),
             _Operator('/', 4, 2, lambda a, b: a / b if b != 0 else (_ for _ in ()).throw(ValueError("Zero division"))),
@@ -233,6 +247,10 @@ class ExpressionInterpreter:
             result = self._operators[operator].func(stack.pop())
             stack.append(result)
 
+        elif nparams == 0:
+            result = self._operators[operator].func()
+            stack.append(result)
+
 
 # Ejemplos de uso
 if __name__ == "__main__":
@@ -297,7 +315,10 @@ if __name__ == "__main__":
         ('x = 0 NOR y = 0', True),
         ('x < 6', False),
         ('NOT x < 6', True),
-        ('NOT x < 6 AND NOT y = 7', True)
+        ('NOT x < 6 AND NOT y = 7', True),
+        ('SQR 4 + 5', 7),
+        ('SQR (4 + 5)', 3),
+        ('SQR (-4 + 13)', 3)
     ]
     
     print("Variables numéricas:", numeric_vars)
