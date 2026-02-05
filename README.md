@@ -99,6 +99,13 @@ The interpreter implements a **small but functional subset of BASIC**.
 - `STOP`
 - `REM`
 - `DATA`, `READ`, `RESTORE`
+- `AND`, `OR`, `NOR`, `NOT`
+- `RANDOMIZE` / `RND`
+- `COS`, `SIN`, `TAN`, `ACS`, `ASN`, `ATN` and `PI` constant
+- `LN`
+- `SQR`
+- `ABS`
+- `INT`
 
 ### Expression Evaluation
 
