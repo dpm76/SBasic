@@ -1,5 +1,13 @@
 import re
 
+class _Operator:
+    def __init__(self, key, precedence, nparams, func):
+        self.key = key
+        self.precedence = precedence
+        self.nparams = nparams
+        self.func  = func
+
+
 class ExpressionInterpreter:
     """Intérprete de expresiones con precedencia matemática, paréntesis y variables"""
     
@@ -14,151 +22,154 @@ class ExpressionInterpreter:
         self._numeric_vars = numeric_vars if numeric_vars is not None else {}
         self._string_vars = string_vars if string_vars is not None else {}
         
-        self._operators = {
-            '^': {'precedence': 2, 'func': lambda a, b: a ** b},
-            '+': {'precedence': 1, 'func': lambda a, b: a + b},
-            '-': {'precedence': 1, 'func': lambda a, b: a - b},
-            '*': {'precedence': 2, 'func': lambda a, b: a * b},
-            '/': {'precedence': 2, 'func': lambda a, b: a / b if b != 0 else (_ for _ in ()).throw(ValueError("Zero division"))},
-            '>': {'precedence': 0, 'func': lambda a, b: a > b},
-            '<': {'precedence': 0, 'func': lambda a, b: a < b},
-            '=': {'precedence': 0, 'func': lambda a, b: a == b},
-            '<=': {'precedence': 0, 'func': lambda a, b: a <= b},
-            '=<': {'precedence': 0, 'func': lambda a, b: a <= b},
-            '>=': {'precedence': 0, 'func': lambda a, b: a >= b},
-            '=>': {'precedence': 0, 'func': lambda a, b: a >= b},
-            '<>': {'precedence': 0, 'func': lambda a, b: a != b},
-        }
+        self._register_operators((
+            _Operator('NEG', 5, 1, lambda a: -a),
+            _Operator('^', 4, 2, lambda a, b: a ** b),
+            _Operator('*', 4, 2, lambda a, b: a * b),
+            _Operator('/', 4, 2, lambda a, b: a / b if b != 0 else (_ for _ in ()).throw(ValueError("Zero division"))),
+            _Operator('+', 3, 2, lambda a, b: a + b),
+            _Operator('-', 3, 2, lambda a, b: a - b),
+            _Operator('>', 2, 2, lambda a, b: a > b),
+            _Operator('<', 2, 2, lambda a, b: a < b),
+            _Operator('=', 2, 2, lambda a, b: a == b),
+            _Operator('<=', 2, 2, lambda a, b: a <= b),
+            _Operator('=<', 2, 2, lambda a, b: a <= b),
+            _Operator('>=', 2, 2, lambda a, b: a >= b),
+            _Operator('=>', 2, 2, lambda a, b: a >= b),
+            _Operator('<>', 2, 2, lambda a, b: a != b),
+            _Operator('NOT', 1, 1, lambda a: not a),
+            _Operator('AND', 0, 2, lambda a, b: a and b),
+            _Operator('OR', 0, 2, lambda a, b: a or b),
+            _Operator('NOR', 0, 2, lambda a, b: not (a or b))
+        ))
+
+    def _register_operators(self, operators):
+
+        self._operators = {}
+        for operator in operators:
+            self._operators[operator.key] = operator
     
     def _tokenize(self, expr):
         """Convierte la expresión en tokens"""
         expr = expr.strip()
-        tokens = []
-        i = 0
+        self._tokens = []
+        self._expr_index = 0
         
-        while i < len(expr):
+        while self._expr_index < len(expr):
             # Saltar espacios
-            if expr[i].isspace():
-                i += 1
+            if expr[self._expr_index].isspace():
+                self._expr_index += 1
                 continue
             
             # String entre comillas
-            if expr[i] == '"':
-                j = i + 1
+            if expr[self._expr_index] == '"':
+                j = self._expr_index + 1
                 while j < len(expr) and expr[j] != '"':
                     j += 1
                 if j >= len(expr):
                     raise ValueError("String sin cerrar")
-                tokens.append(('STRING', expr[i+1:j]))
-                i = j + 1
+                self._tokens.append(('STRING', expr[self._expr_index+1:j]))
+                self._expr_index = j + 1
             
+            # Operador
+            elif self._is_operator(expr):
+                pass
+
             # Variable o número
-            elif expr[i].isalpha():
+            elif expr[self._expr_index].isalpha():
                 # Variable (empieza con letra)
-                j = i
+                j = self._expr_index
                 while j < len(expr) and (expr[j].isalnum() or expr[j] == '$'):
                     j += 1
-                var_name = expr[i:j]
+                var_name = expr[self._expr_index:j]
                 
                 # Determinar si es variable de string o numérica
                 if var_name.endswith('$'):
                     if var_name not in self._string_vars:
                         raise ValueError(f"Variable de texto '{var_name}' no definida")
-                    tokens.append(('STRING', self._string_vars[var_name]))
+                    self._tokens.append(('STRING', self._string_vars[var_name]))
                 else:
                     if var_name not in self._numeric_vars:
                         raise ValueError(f"Variable numérica '{var_name}' no definida")
-                    tokens.append(('NUMBER', self._numeric_vars[var_name]))
+                    self._tokens.append(('NUMBER', self._numeric_vars[var_name]))
                 
-                i = j
+                self._expr_index = j
             
-            # Número (incluyendo negativos)
-            elif expr[i].isdigit() or (expr[i] == '-' and self._is_negative_number(tokens, expr, i)):
-                j = i
+            # Número
+            elif expr[self._expr_index].isdigit():
+                j = self._expr_index
                 # Si es un signo negativo, avanzar
-                if expr[i] == '-':
+                if expr[self._expr_index] == '-':
                     j += 1
                 # Leer el número
                 while j < len(expr) and (expr[j].isdigit() or expr[j] == '.'):
                     j += 1
-                num_str = expr[i:j]
+                num_str = expr[self._expr_index:j]
                 if '.' in num_str:
-                    tokens.append(('NUMBER', float(num_str)))
+                    self._tokens.append(('NUMBER', float(num_str)))
                 else:
-                    tokens.append(('NUMBER', int(num_str)))
-                i = j
-            
-            # Operador
-            elif expr[i] in '^+-*/<>=':
-                operator = expr[i]                
-                i += 1
-                if i < len(expr) and expr[i] in '=<>':
-                    operator += expr[i]
-                    i += 1
-
-                tokens.append(('OPERATOR', operator))
+                    self._tokens.append(('NUMBER', int(num_str)))
+                self._expr_index = j
             
             # Paréntesis
-            elif expr[i] in '()':
-                tokens.append(('PAREN', expr[i]))
-                i += 1
+            elif expr[self._expr_index] == '(':
+                self._tokens.append(('PAREN_OPEN', expr[self._expr_index]))
+                self._expr_index += 1
+
+            elif expr[self._expr_index] in ')':
+                self._tokens.append(('PAREN_CLOSE', expr[self._expr_index]))
+                self._expr_index += 1
             
             else:
-                raise ValueError(f"Carácter inválido: {expr[i]}")
+                raise ValueError(f"Carácter inválido: {expr[self._expr_index]}")
         
-        return tokens
-    
-    def _is_negative_number(self, tokens, expr, pos):
-        """
-        Determina si un '-' es parte de un número negativo o un operador de resta.
-        Es un número negativo si:
-        - Es el primer token, O
-        - El token anterior es un operador, O
-        - El token anterior es un paréntesis de apertura '('
-        Y además hay un dígito después del '-'
-        """
-        # Verificar que hay un dígito después del '-'
-        if pos + 1 >= len(expr) or not expr[pos + 1].isdigit():
-            return False
-        
-        # Si no hay tokens previos, es un número negativo
-        if not tokens:
+
+    def _is_operator(self, expression):
+
+        if expression[self._expr_index] == '-' and (len(self._tokens) == 0 or self._tokens[-1][0] == "PAREN_OPEN"):
+            self._tokens.append(('OPERATOR', 'NEG'))
+            self._expr_index += 1
             return True
-        
-        # Obtener el último token
-        last_token_type, last_token_value = tokens[-1]
-        
-        # Es número negativo si viene después de un operador o paréntesis de apertura
-        if last_token_type == 'OPERATOR':
+
+        operator_candidate = ""
+        for operator in self._operators:
+            end_index = self._expr_index + len(operator)
+            if (expression[self._expr_index: end_index] == operator 
+                and len(operator_candidate) < len(operator)):
+                operator_candidate = operator
+
+        if operator_candidate:
+            self._expr_index += len(operator_candidate)            
+            self._tokens.append(('OPERATOR', operator_candidate))
             return True
-        if last_token_type == 'PAREN' and last_token_value == '(':
-            return True
-        
+
         return False
     
     def evaluate(self, expr):
         """Evalúa la expresión usando el algoritmo Shunting Yard"""
-        tokens = self._tokenize(expr)
-        return self._evaluate_tokens(tokens)
+        self._tokenize(expr)
+        return self._evaluate_tokens()
     
-    def _evaluate_tokens(self, tokens):
+    def _evaluate_tokens(self):
         """Evalúa los tokens usando notación postfija (RPN)"""
         output_queue = []
         operator_stack = []
         
-        for token_type, token_value in tokens:
+        for token_type, token_value in self._tokens:
             if token_type in ('NUMBER', 'STRING'):
                 output_queue.append(token_value)
             
             elif token_type == 'OPERATOR':
                 while (operator_stack and 
-                       operator_stack[-1] != '(' and
-                       self._operators[operator_stack[-1]]['precedence'] >= 
-                       self._operators[token_value]['precedence']):
-                    self._apply_operator(output_queue, operator_stack.pop())
+                       operator_stack[-1] != '(' and                       
+                       self._operators[operator_stack[-1]].precedence >= 
+                       self._operators[token_value].precedence):
+                    op = operator_stack.pop()
+                    self._apply_operator(output_queue, op)
+
                 operator_stack.append(token_value)
             
-            elif token_type == 'PAREN':
+            elif token_type.startswith('PAREN'):
                 if token_value == '(':
                     operator_stack.append('(')
                 else:  # ')'
@@ -181,39 +192,46 @@ class ExpressionInterpreter:
         return output_queue[0]
     
     def _apply_operator(self, stack, operator):
-        """Aplica un operador a los últimos dos elementos del stack"""
-        if len(stack) < 2:
-            raise ValueError("Expresión inválida")
+        """Aplica un operador a los últimos dos elementos del stack""" 
+        nparams = self._operators[operator].nparams
+        if len(stack) < nparams:
+            raise ValueError(f"Operación no válida: {operator}")
         
-        right = stack.pop()
-        left = stack.pop()
-        
-        # Operaciones con números
-        if isinstance(left, (int, float)) and isinstance(right, (int, float)):
-            result = self._operators[operator]['func'](left, right)
+        if nparams == 2:
+
+            right = stack.pop()
+            left = stack.pop()
+
+            # Operaciones con números
+            if isinstance(left, (int, float)) and isinstance(right, (int, float)):
+                result = self._operators[operator].func(left, right)
+                stack.append(result)
+            
+            # Operaciones con strings
+            elif isinstance(left, str) and isinstance(right, str):
+                if operator == '+':
+                    stack.append(left + right)
+                else:
+                    raise ValueError(f"Operación {operator} no válida entre strings")
+            
+            elif isinstance(left, str) and isinstance(right, (int, float)):
+                if operator == '*':
+                    stack.append(left * int(right))
+                else:
+                    raise ValueError(f"Operación {operator} no válida entre string y número")
+            
+            elif isinstance(left, (int, float)) and isinstance(right, str):
+                if operator == '*':
+                    stack.append(right * int(left))
+                else:
+                    raise ValueError(f"Operación {operator} no válida entre número y string")
+            
+            else:
+                raise ValueError("Operación no válida")
+
+        elif nparams == 1:
+            result = self._operators[operator].func(stack.pop())
             stack.append(result)
-        
-        # Operaciones con strings
-        elif isinstance(left, str) and isinstance(right, str):
-            if operator == '+':
-                stack.append(left + right)
-            else:
-                raise ValueError(f"Operación {operator} no válida entre strings")
-        
-        elif isinstance(left, str) and isinstance(right, (int, float)):
-            if operator == '*':
-                stack.append(left * int(right))
-            else:
-                raise ValueError(f"Operación {operator} no válida entre string y número")
-        
-        elif isinstance(left, (int, float)) and isinstance(right, str):
-            if operator == '*':
-                stack.append(right * int(left))
-            else:
-                raise ValueError(f"Operación {operator} no válida entre número y string")
-        
-        else:
-            raise ValueError("Operación no válida")
 
 
 # Ejemplos de uso
@@ -239,36 +257,47 @@ if __name__ == "__main__":
     
     test_cases = [
         # Pruebas con números negativos
-        '-2',                       # -2
-        '-5 + 3',                   # -5 + 3 = -2
-        '10 + -5',                  # 10 + (-5) = 5
-        '(-2) * 3',                 # -2 * 3 = -6
-        '-10 / 2',                  # -10 / 2 = -5.0
-        '5 - -3',                   # 5 - (-3) = 8
+        ('-2', -2),                       # -2
+        ('-5 + 3', -2),                   # -5 + 3 = -2
+        ('10 + (-5)', 5),                  # 10 + (-5) = 5
+        ('(-2) * 3', -6),                 # -2 * 3 = -6
+        ('-10 / 2', -5.0),                  # -10 / 2 = -5.0
+        ('5 - (-3)', 8),                   # 5 - (-3) = 8
         
         # Operaciones con variables numéricas
-        'x + y',                    # 10 + 5 = 15
-        'x * 2',                    # 10 * 2 = 20
-        '(x + y) * 2',              # (10 + 5) * 2 = 30
-        'precio - 10',              # 99.99 - 10 = 89.99
-        'pi * 2',                   # 3.14159 * 2 = 6.28318
+        ('x + y', 15),                    # 10 + 5 = 15
+        ('x * 2', 20),                    # 10 * 2 = 20
+        ('(x + y) * 2', 30),              # (10 + 5) * 2 = 30
+        ('precio - 10', 89.99),              # 99.99 - 10 = 89.99
+        ('pi * 2', 6.28318),                   # 3.14159 * 2 = 6.28318
         
         # Operaciones con variables de texto
-        'saludo$ + " " + nombre$',  # "Hola Juan"
-        'lenguaje$ * 3',            # "PythonPythonPython"
-        'nombre$ + " " + apellido$',# "Juan Pérez"
+        ('saludo$ + " " + nombre$', "Hola Juan"),  # "Hola Juan"
+        ('lenguaje$ * 3', "PythonPythonPython"),            # "PythonPythonPython"
+        ('nombre$ + " " + apellido$', "Juan Pérez"),# "Juan Pérez"
         
         # Mezcla de variables y literales
-        'x + 5',                    # 10 + 5 = 15
-        '(x + y) / 3',              # 15 / 3 = 5.0
+        ('x + 5', 15),                    # 10 + 5 = 15
+        ('(x + y) / 3', 5.0),              # 15 / 3 = 5.0
         
         # Expresiones complejas
-        '(x * 2) + (y * 3)',        # 20 + 15 = 35
-        'saludo$ + ", " + nombre$ + "!"',  # "Hola, Juan!"
+        ('(x * 2) + (y * 3)', 35),        # 20 + 15 = 35
+        ('saludo$ + ", " + nombre$ + "!"', "Hola, Juan!"),  # "Hola, Juan!"
         
         # Más pruebas con negativos
-        '(-5 + 3) * 2',             # (-5 + 3) * 2 = -4
-        'x + -y',                   # 10 + (-5) = 5
+        ('(-5 + 3) * 2', -4),             # (-5 + 3) * 2 = -4
+        ('x + (-y)', 5),                 # 10 + (-5) = 5
+        ('x + (-3)', 7),                 # 10 + (-3) = 7
+
+        # Booleans
+        ('x < y', False),
+        ('x > y', True),
+        ('x >= 10 AND y = 5', True),
+        ('x = 10 OR y < 5', True),
+        ('x = 0 NOR y = 0', True),
+        ('x < 6', False),
+        ('NOT x < 6', True),
+        ('NOT x < 6 AND NOT y = 7', True)
     ]
     
     print("Variables numéricas:", numeric_vars)
@@ -276,11 +305,12 @@ if __name__ == "__main__":
     print("\n" + "=" * 60)
     print("Evaluando expresiones con variables:")
     print("=" * 60)
-    
-    for expr in test_cases:
+
+    for expr, expected_result in test_cases:
         try:
             result = interpreter.evaluate(expr)
-            print(f"{expr:35} = {result}")
+            correct_message = "OK" if expected_result == result else f"; expected: {expected_result}"
+            print(f"{expr:35} = {result} {correct_message}")
         except Exception as e:
             print(f"{expr:35} = ERROR: {e}")
     
