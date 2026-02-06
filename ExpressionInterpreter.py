@@ -25,6 +25,8 @@ class ExpressionInterpreter:
         self._string_vars = string_vars if string_vars is not None else {}
         
         self._register_operators((
+            _Operator('RND', 6, 0, lambda: random()),
+            _Operator('PI', 6, 0, lambda: pi),
             _Operator('NEG', 5, 1, lambda a: -a),
             _Operator('SQR', 5, 1, lambda a: sqrt(a)),
             _Operator('COS', 5, 1, lambda a: cos(a)),
@@ -40,8 +42,6 @@ class ExpressionInterpreter:
             _Operator('STR$', 5, 1, lambda a: str(f"{a:g}") if isinstance(a, (int, float)) else (_ for _ in ()).throw(ValueError(f"'{a}' is not a number"))),
             _Operator('LEN', 5, 1, lambda a: len(a) if isinstance(a, str) else (_ for _ in ()).throw(ValueError(f"{a} is not a string"))),
             _Operator('SGN', 5, 1, lambda a: -1 if a < 0 else 1 if a > 0 else 0),
-            _Operator('RND', 5, 0, lambda: random()),
-            _Operator('PI', 5, 0, lambda: pi),
             _Operator('^', 4, 2, lambda a, b: a ** b),
             _Operator('*', 4, 2, lambda a, b: a * b),
             _Operator('/', 4, 2, lambda a, b: a / b if b != 0 else (_ for _ in ()).throw(ValueError("Zero division"))),
