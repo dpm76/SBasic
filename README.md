@@ -102,10 +102,13 @@ The interpreter implements a **small but functional subset of BASIC**.
 - `AND`, `OR`, `NOR`, `NOT`
 - `RANDOMIZE` / `RND`
 - `COS`, `SIN`, `TAN`, `ACS`, `ASN`, `ATN` and `PI` constant
-- `LN`
+- `LN`, `EXP`
 - `SQR`
 - `ABS`
 - `INT`
+- `SGN`
+- `STR$`
+- `LEN` 
 
 ### Expression Evaluation
 

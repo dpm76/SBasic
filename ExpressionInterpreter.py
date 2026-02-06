@@ -1,5 +1,5 @@
 import re
-from math import sqrt, cos, sin, tan, acos, asin, atan, log, floor, pi
+from math import sqrt, cos, sin, tan, acos, asin, atan, log, exp, floor, pi
 from random import random
 
 class _Operator:
@@ -34,8 +34,12 @@ class ExpressionInterpreter:
             _Operator('ASN', 5, 1, lambda a: asin(a)),
             _Operator('ATN', 5, 1, lambda a: atan(a)),
             _Operator('LN', 5, 1, lambda a: log(a)),
+            _Operator('EXP', 5, 1, lambda a: exp(a)),
             _Operator('INT', 5, 1, lambda a: floor(a)),
             _Operator('ABS', 5, 1, lambda a: abs(a)),
+            _Operator('STR$', 5, 1, lambda a: str(f"{a:g}") if isinstance(a, (int, float)) else (_ for _ in ()).throw(ValueError(f"'{a}' is not a number"))),
+            _Operator('LEN', 5, 1, lambda a: len(a) if isinstance(a, str) else (_ for _ in ()).throw(ValueError(f"{a} is not a string"))),
+            _Operator('SGN', 5, 1, lambda a: -1 if a < 0 else 1 if a > 0 else 0),
             _Operator('RND', 5, 0, lambda: random()),
             _Operator('PI', 5, 0, lambda: pi),
             _Operator('^', 4, 2, lambda a, b: a ** b),
@@ -174,10 +178,13 @@ class ExpressionInterpreter:
                 output_queue.append(token_value)
             
             elif token_type == 'OPERATOR':
-                while (operator_stack and 
-                       operator_stack[-1] != '(' and                       
-                       self._operators[operator_stack[-1]].precedence >= 
-                       self._operators[token_value].precedence):
+                while (operator_stack 
+                    and operator_stack[-1] != '(' 
+                    and ((self._operators[operator_stack[-1]].precedence 
+                        > self._operators[token_value].precedence)
+                        or ( self._operators[token_value].nparams == 2
+                            and self._operators[operator_stack[-1]].precedence 
+                                == self._operators[token_value].precedence))):
                     op = operator_stack.pop()
                     self._apply_operator(output_queue, op)
 
@@ -316,9 +323,19 @@ if __name__ == "__main__":
         ('x < 6', False),
         ('NOT x < 6', True),
         ('NOT x < 6 AND NOT y = 7', True),
+
+        #Math functions
         ('SQR 4 + 5', 7),
         ('SQR (4 + 5)', 3),
-        ('SQR (-4 + 13)', 3)
+        ('SQR (-4 + 13)', 3),
+        ('ABS (-3)', 3),
+        ('SGN (-3)', -1),
+        ('SGN 3', 1),
+        ('SGN 0', 0),
+
+        #String functions
+        ('STR$ (10*10)', "100"),
+        ('LEN STR$ 100.000', 3)
     ]
     
     print("Variables numéricas:", numeric_vars)
