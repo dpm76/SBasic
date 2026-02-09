@@ -82,11 +82,13 @@ class ExpressionInterpreter:
             # String entre comillas
             if expr[self._expr_index] == '"':
                 j = self._expr_index + 1
-                while j < len(expr) and expr[j] != '"':
+                while j < len(expr) and (expr[j] != '"' or (j+1 < len(expr) and expr[j+1] == '"')):
                     j += 1
+                    if expr[j-1] == '"' and j < len(expr) and expr[j] == '"':
+                        j += 1
                 if j >= len(expr):
                     raise ValueError("String sin cerrar")
-                self._tokens.append(('STRING', expr[self._expr_index+1:j]))
+                self._tokens.append(('STRING', expr[self._expr_index+1:j].replace('""','"')))
                 self._expr_index = j + 1
             
             # Operador
@@ -279,7 +281,7 @@ if __name__ == "__main__":
     
     # Crear intérprete con las variables
     interpreter = ExpressionInterpreter(numeric_vars, string_vars)
-    
+   
     test_cases = [
         # Pruebas con números negativos
         ('-2', -2),                       # -2
@@ -334,6 +336,9 @@ if __name__ == "__main__":
         ('SGN 0', 0),
 
         #String functions
+        ('"Esto es una cadena"', 'Esto es una cadena'),
+        ('"""Esto"" es una cadena"', '"Esto" es una cadena'),
+        ('"Hola """', 'Hola "'),
         ('STR$ (10*10)', "100"),
         ('LEN STR$ 100.000', 3)
     ]

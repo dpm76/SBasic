@@ -129,14 +129,12 @@ class BasicInterpreter:
         args = re_split(r';(?=(?:[^"]*"[^"]*")*[^"]*$)', rest)
 
         for arg in args:
-            if arg.startswith('"') and arg.endswith('"'):
-                print(arg[1:-1], end="")
-            elif arg != "":
+            if arg != "":
                 value = self._expr_interpreter.evaluate(arg)
-                if isinstance(value, str):
-                    print(value, end="")
-                else:
+                if isinstance(value, (float, int)):
                     print(f"{value:g}", end="")
+                else:
+                    print(value, end="")
 
         if not code.endswith(";"):
             print()
@@ -184,9 +182,9 @@ class BasicInterpreter:
         _, rest = code.split(" ", 1)
         chunks = re_split(r';(?=(?:[^"]*"[^"]*")*[^"]*$)', rest, 1)
         if len(chunks) > 1:
-            prompt = chunks[0]
+            prompt = self._expr_interpreter.evaluate(chunks[0].strip())
             variable = chunks[1]
-            value = input(prompt.strip()[1:-1])
+            value = input(prompt)
         else:
             variable = chunks[0]
             value = input("? ")
