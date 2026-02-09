@@ -180,8 +180,10 @@ class BasicInterpreter:
     def execute_input(self, code):
 
         _, rest = code.split(" ", 1)
-        chunks = re_split(r';(?=(?:[^"]*"[^"]*")*[^"]*$)', rest, 1)
-        if len(chunks) > 1:
+        chunks = re_split(r'[;,](?=(?:[^"]*"[^"]*")*[^"]*$)', rest)
+        if len(chunks) > 2:
+            raise ValueError("INPUT: Too much arguments")
+        elif len(chunks) == 2:
             prompt = self._expr_interpreter.evaluate(chunks[0].strip())
             variable = chunks[1]
             value = input(prompt)
