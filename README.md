@@ -108,7 +108,8 @@ The interpreter implements a **small but functional subset of BASIC**.
 - `INT`
 - `SGN`
 - `STR$`
-- `LEN` 
+- `LEN`
+- `VAL`
 
 ### Expression Evaluation
 

@@ -42,6 +42,7 @@ class ExpressionInterpreter:
             _Operator('STR$', 5, 1, lambda a: str(f"{a:g}") if isinstance(a, (int, float)) else (_ for _ in ()).throw(ValueError(f"'{a}' is not a number"))),
             _Operator('LEN', 5, 1, lambda a: len(a) if isinstance(a, str) else (_ for _ in ()).throw(ValueError(f"{a} is not a string"))),
             _Operator('SGN', 5, 1, lambda a: -1 if a < 0 else 1 if a > 0 else 0),
+            _Operator('VAL', 5, 1, lambda a: self.evaluate(a)),
             _Operator('^', 4, 2, lambda a, b: a ** b),
             _Operator('*', 4, 2, lambda a, b: a * b),
             _Operator('/', 4, 2, lambda a, b: a / b if b != 0 else (_ for _ in ()).throw(ValueError("Zero division"))),
@@ -334,13 +335,17 @@ if __name__ == "__main__":
         ('SGN (-3)', -1),
         ('SGN 3', 1),
         ('SGN 0', 0),
-
+        
         #String functions
         ('"Esto es una cadena"', 'Esto es una cadena'),
         ('"""Esto"" es una cadena"', '"Esto" es una cadena'),
         ('"Hola """', 'Hola "'),
         ('STR$ (10*10)', "100"),
-        ('LEN STR$ 100.000', 3)
+        ('LEN STR$ 100.000', 3),
+        ('VAL "2*3"', 6),
+        ('VAL ("2" + "*3")', 6),
+        ('VAL "VAL ""VAL """"2"""""""', 2)
+
     ]
     
     print("Variables numéricas:", numeric_vars)
