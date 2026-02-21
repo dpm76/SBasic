@@ -110,6 +110,7 @@ The interpreter implements a **small but functional subset of BASIC**.
 - `STR$`
 - `LEN`
 - `VAL`
+- Substrings: `"This is a string"(3 TO 10)`, `a$(TO x)`
 
 ### Expression Evaluation
 

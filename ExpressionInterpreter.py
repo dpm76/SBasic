@@ -48,6 +48,9 @@ class ExpressionInterpreter:
             _Operator('/', 4, 2, lambda a, b: a / b if b != 0 else (_ for _ in ()).throw(ValueError("Zero division"))),
             _Operator('+', 3, 2, lambda a, b: a + b),
             _Operator('-', 3, 2, lambda a, b: a - b),
+            _Operator('TO', 2, 3, lambda s, a, b: s[a-1:b] if isinstance(s, str) else (_ for _ in()).throw(ValueError(f"{s} is not a string"))),
+            _Operator('START_TO', 2, 2, lambda s, b: s[:b] if isinstance(s, str) else (_ for _ in()).throw(ValueError(f"{s} is not a string"))),
+            _Operator('TO_END', 2, 2, lambda s, a: s[a-1:] if isinstance(s, str) else (_ for _ in()).throw(ValueError(f"{s} is not a string"))),
             _Operator('>', 2, 2, lambda a, b: a > b),
             _Operator('<', 2, 2, lambda a, b: a < b),
             _Operator('=', 2, 2, lambda a, b: a == b),
@@ -137,7 +140,10 @@ class ExpressionInterpreter:
                 self._tokens.append(('PAREN_OPEN', expr[self._expr_index]))
                 self._expr_index += 1
 
-            elif expr[self._expr_index] in ')':
+            elif expr[self._expr_index] == ')':
+                if self._tokens[-1][1] == 'TO':
+                    self._tokens[-1] = ('OPERATOR' ,'TO_END')
+
                 self._tokens.append(('PAREN_CLOSE', expr[self._expr_index]))
                 self._expr_index += 1
             
@@ -160,7 +166,9 @@ class ExpressionInterpreter:
                 operator_candidate = operator
 
         if operator_candidate:
-            self._expr_index += len(operator_candidate)            
+            self._expr_index += len(operator_candidate)
+            if operator_candidate == "TO" and self._tokens[-1][0] == "PAREN_OPEN":
+                operator_candidate = "START_TO"
             self._tokens.append(('OPERATOR', operator_candidate))
             return True
 
@@ -241,6 +249,18 @@ class ExpressionInterpreter:
             elif isinstance(left, str) and isinstance(right, (int, float)):
                 if operator == '*':
                     stack.append(left * int(right))
+                elif operator == 'START_TO':
+                    end = right
+                    string = left
+
+                    result = self._operators[operator].func(string, end)
+                    stack.append(result)
+                elif operator == 'TO_END':
+                    start = right
+                    string = left
+
+                    result = self._operators[operator].func(string, start)
+                    stack.append(result)
                 else:
                     raise ValueError(f"Operación {operator} no válida entre string y número")
             
@@ -260,6 +280,16 @@ class ExpressionInterpreter:
         elif nparams == 0:
             result = self._operators[operator].func()
             stack.append(result)
+
+        elif nparams == 3:
+
+            if operator == 'TO':
+                end = stack.pop()
+                start = stack.pop()                
+                string = stack.pop()
+
+                result = self._operators[operator].func(string, start, end)
+                stack.append(result)
 
 
 # Ejemplos de uso
@@ -282,7 +312,7 @@ if __name__ == "__main__":
     
     # Crear intérprete con las variables
     interpreter = ExpressionInterpreter(numeric_vars, string_vars)
-   
+
     test_cases = [
         # Pruebas con números negativos
         ('-2', -2),                       # -2
@@ -344,8 +374,14 @@ if __name__ == "__main__":
         ('LEN STR$ 100.000', 3),
         ('VAL "2*3"', 6),
         ('VAL ("2" + "*3")', 6),
-        ('VAL "VAL ""VAL """"2"""""""', 2)
-
+        ('VAL "VAL ""VAL """"2"""""""', 2),
+        ('"Esto es una cadena"(1 TO 4)', 'Esto'),
+        ('"Esto es una cadena"(TO 4)', 'Esto'),
+        ('"Esto es una cadena"(13 TO 18)', 'cadena'),
+        ('"Esto es una cadena"(6+7 TO 6*3)', 'cadena'),
+        ('"Esto es una cadena"(13 TO)', 'cadena'),
+        ('"Esto es una cadena"(y TO x)', ' es un'),
+        ('lenguaje$(2 TO 5)', 'ytho')
     ]
     
     print("Variables numéricas:", numeric_vars)
