@@ -1,4 +1,6 @@
 from ExpressionInterpreter import ExpressionInterpreter
+from FunctionDefinition import FunctionDefinition
+from ValueType import ValueType
 from re import split as re_split
 from random import seed
 
@@ -9,7 +11,8 @@ class BasicInterpreter:
         self._pc = 0                # program counter
         self._num_variables = {}
         self._str_variables = {}
-        self._expr_interpreter = ExpressionInterpreter(self._num_variables, self._str_variables)
+        self._functions = {}
+        self._expr_interpreter = ExpressionInterpreter(self._num_variables, self._str_variables, self._functions)
         self._stop = False
         self._return_stack = []
         self._data_buffer = []
@@ -115,6 +118,9 @@ class BasicInterpreter:
 
         elif code_upper.startswith("RANDOMIZE"):
             self.execute_randomize(code)
+
+        elif code_upper.startswith("DEF"):
+            self.execute_def(code)
 
         else:
             raise RuntimeError(f"Unknown keyword: {code}")
@@ -267,4 +273,15 @@ class BasicInterpreter:
 
     def execute_randomize(self, code):
         seed()
+
+    def execute_def(self, code):
+        _, function = code.split("FN")
+        header, body = function.strip().split("=")
+        name_raw, params_raw = header.strip().split("(")
+        name = name_raw.strip()
+        params = [p.strip() for p in params_raw.strip()[:-1].split(",")]
+        return_type = ValueType.String if name[-1] == '$' else ValueType.Integer
+        
+        definition = FunctionDefinition(return_type, params, body.strip())
+        self._functions[name] = definition
         

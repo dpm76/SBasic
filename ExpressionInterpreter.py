@@ -13,20 +13,23 @@ class _Operator:
 class ExpressionInterpreter:
     """Intérprete de expresiones con precedencia matemática, paréntesis y variables"""
     
-    def __init__(self, numeric_vars=None, string_vars=None):
+    def __init__(self, numeric_vars=None, string_vars=None, functions=None):
         """
         Inicializa el intérprete con diccionarios de variables.
         
         Args:
             numeric_vars: Diccionario con variables numéricas {nombre: valor}
             string_vars: Diccionario con variables de texto {nombre$: valor}
+            functions: Diccionario con definición de funciones {nombre[$]: FunctionDefinition}
         """
         self._numeric_vars = numeric_vars if numeric_vars is not None else {}
         self._string_vars = string_vars if string_vars is not None else {}
+        self._functions = functions if functions is not None else {}
         
         self._register_operators((
             _Operator('RND', 6, 0, lambda: random()),
             _Operator('PI', 6, 0, lambda: pi),
+            _Operator('FN', 6, 2, lambda n, p: self._functions[n].resolve(self, p)),
             _Operator('NEG', 5, 1, lambda a: -a),
             _Operator('SQR', 5, 1, lambda a: sqrt(a)),
             _Operator('COS', 5, 1, lambda a: cos(a)),
@@ -169,7 +172,28 @@ class ExpressionInterpreter:
             self._expr_index += len(operator_candidate)
             if operator_candidate == "TO" and self._tokens[-1][0] == "PAREN_OPEN":
                 operator_candidate = "START_TO"
+
             self._tokens.append(('OPERATOR', operator_candidate))
+
+            if operator_candidate == "FN":
+                while expression[self._expr_index] == ' ':
+                    self._expr_index += 1
+                name_start = self._expr_index
+                while expression[self._expr_index] not in ' (':
+                    self._expr_index += 1
+                name_end = self._expr_index
+                self._tokens.append(('FUNCTION_NAME', expression[name_start: name_end]))
+
+                while expression[self._expr_index] != '(':
+                    self._expr_index += 1
+                params_start = self._expr_index + 1
+                while expression[self._expr_index] != ')':
+                    self._expr_index += 1
+                params_end = self._expr_index
+
+                self._expr_index += 1
+                self._tokens.append(('FUNCTION_PARAMS', expression[params_start: params_end]))
+            
             return True
 
         return False
@@ -185,7 +209,7 @@ class ExpressionInterpreter:
         operator_stack = []
         
         for token_type, token_value in self._tokens:
-            if token_type in ('NUMBER', 'STRING'):
+            if token_type in ('NUMBER', 'STRING', 'FUNCTION_NAME', 'FUNCTION_PARAMS'):
                 output_queue.append(token_value)
             
             elif token_type == 'OPERATOR':
@@ -234,8 +258,12 @@ class ExpressionInterpreter:
             right = stack.pop()
             left = stack.pop()
 
+            if operator == 'FN':
+                result = self._operators[operator].func(left, right)
+                stack.append(result)
+
             # Operaciones con números
-            if isinstance(left, (int, float)) and isinstance(right, (int, float)):
+            elif isinstance(left, (int, float)) and isinstance(right, (int, float)):
                 result = self._operators[operator].func(left, right)
                 stack.append(result)
             

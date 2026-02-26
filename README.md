@@ -111,6 +111,7 @@ The interpreter implements a **small but functional subset of BASIC**.
 - `LEN`
 - `VAL`
 - Substrings: `"This is a string"(3 TO 10)`, `a$(TO x)`
+- `DEF FN`, `FN`
 
 ### Expression Evaluation
 
