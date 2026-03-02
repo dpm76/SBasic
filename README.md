@@ -112,6 +112,9 @@ The interpreter implements a **small but functional subset of BASIC**.
 - `VAL`
 - Substrings: `"This is a string"(3 TO 10)`, `a$(TO x)`
 - `DEF FN`, `FN`
+- `AT`, `TAB`
+- `CLS`
+- `WAIT` (Non-standard keyword added to control the program execution)
 
 ### Expression Evaluation
 
@@ -289,6 +292,14 @@ Comment line. Ignored during execution.
 Example:
 ```
 REM This is a comment
+```
+
+#### `WAIT`
+
+This non-standard keyword is added to control the timing of program's execution.
+
+```
+WAIT 2.5 : REM Unit is seconds
 ```
 
 #### Multiple keywords in the same line
