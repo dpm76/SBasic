@@ -115,6 +115,7 @@ The interpreter implements a **small but functional subset of BASIC**.
 - `AT`, `TAB`
 - `CLS`
 - `WAIT` (Non-standard keyword added to control the program execution)
+- `INK`, `PAPER`, `BRIGHT`, `FLASH` (the actual effect will depend on the used terminal)
 
 ### Expression Evaluation
 

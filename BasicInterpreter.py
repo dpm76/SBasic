@@ -6,6 +6,9 @@ from random import seed
 from time import sleep
 
 class BasicInterpreter:
+
+    _ansi_colors = { 0: 0, 1: 4, 2: 1, 3: 5, 4: 2, 5: 6, 6: 3, 7: 7 }
+
     def __init__(self):
         self._program = []          # [(line_number, code)]
         self._line_index = {}       # line_number -> index in program
@@ -19,6 +22,9 @@ class BasicInterpreter:
         self._data_buffer = []
         self._data_buffer_index = 0
         self._restore_line_index = {}
+        self._bright = False
+        self._ink_color = 7
+        self._paper_color = 0
         
     def load(self, stream):
         """
@@ -75,6 +81,8 @@ class BasicInterpreter:
             print(f"\r\nError: {re}\r\n\tat line {line_number} {code}")
         except KeyboardInterrupt:
             print("\r\nInterrupted program")
+        finally:
+            print("\x1b[0m",end="")
 
     def execute_sentence(self, code):
         code = code.strip()
@@ -130,6 +138,18 @@ class BasicInterpreter:
 
         elif code_upper.startswith("WAIT"):
             self.execute_wait(code)
+
+        elif code_upper.startswith("INK"):
+            self.execute_ink(code)
+
+        elif code_upper.startswith("PAPER"):
+            self.execute_paper(code)
+
+        elif code_upper.startswith("BRIGHT"):
+            self.execute_bright(code)
+
+        elif code_upper.startswith("FLASH"):
+            self.execute_flash(code)
 
         else:
             raise RuntimeError(f"Unknown keyword: {code}")
@@ -295,7 +315,7 @@ class BasicInterpreter:
         self._functions[name] = definition
 
     def execute_cls(self, code):
-        print("\x1b[2J\x1b[H")
+        print("\x1b[2J\x1b[H", end="")
 
     def execute_wait(self, code):
         _, param = code.split(" ", 1)
@@ -303,4 +323,32 @@ class BasicInterpreter:
         if not isinstance(seconds, (float, int)):
             raise ValueError("WAIT: Number expected as parameter")
         sleep(seconds)
+
+    def _apply_ink_color(self):
+        print(f"\x1b[{(90 if self._bright else 30) + BasicInterpreter._ansi_colors[self._ink_color]}m", end="")
+
+    def execute_ink(self, code):
+        _, param = code.split(" ", 1)
+        self._ink_color = int(self._expr_interpreter.evaluate(param.strip()))   
+        self._apply_ink_color()     
+
+    def _apply_paper_color(self):
+        print(f"\x1b[{(100 if self._bright else 40) + BasicInterpreter._ansi_colors[self._paper_color]}m", end="")
+
+    def execute_paper(self, code):
+        _, param = code.split(" ", 1)
+        self._paper_color = int(self._expr_interpreter.evaluate(param.strip()))
+        self._apply_paper_color()
+
+    def execute_bright(self, code):
+        _, param = code.split(" ", 1)
+        value = int(self._expr_interpreter.evaluate(param.strip()))
+        self._bright = value == 1
+        self._apply_ink_color()
+        self._apply_paper_color()
+        
+    def execute_flash(self, code):
+        _, param = code.split(" ", 1)
+        value = self._expr_interpreter.evaluate(param.strip())
+        print(f"\x1b[{5 if value == 1 else 25}m", end="")
         
