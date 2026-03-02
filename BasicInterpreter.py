@@ -42,6 +42,8 @@ class BasicInterpreter:
                 code_part = code_part.strip()
                 if code_part.startswith("DATA"):
                     self.execute_data(number, code_part)
+                elif code_part.startswith("REM"):
+                    break
                 else:
                     self._program.append((number, part_index, code_part))                
                     part_index += 1
