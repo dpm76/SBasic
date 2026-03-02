@@ -264,7 +264,7 @@ class ExpressionInterpreter:
             right = stack.pop()
             left = stack.pop()
 
-            if operator == 'FN':
+            if operator == 'FN' or operator in '<>>=<=':
                 result = self._operators[operator].func(left, right)
                 stack.append(result)
 
@@ -284,13 +284,13 @@ class ExpressionInterpreter:
                 if operator == '*':
                     stack.append(left * int(right))
                 elif operator == 'START_TO':
-                    end = right
+                    end = int(right)
                     string = left
 
                     result = self._operators[operator].func(string, end)
                     stack.append(result)
                 elif operator == 'TO_END':
-                    start = right
+                    start = int(right)
                     string = left
 
                     result = self._operators[operator].func(string, start)
@@ -318,8 +318,8 @@ class ExpressionInterpreter:
         elif nparams == 3:
 
             if operator == 'TO':
-                end = stack.pop()
-                start = stack.pop()                
+                end = int(stack.pop())
+                start = int(stack.pop())
                 string = stack.pop()
 
                 result = self._operators[operator].func(string, start, end)
@@ -390,6 +390,8 @@ if __name__ == "__main__":
         ('x < 6', False),
         ('NOT x < 6', True),
         ('NOT x < 6 AND NOT y = 7', True),
+        ('nombre$ = "Juan"', True),
+        ('nombre$ = "Pepe"', False),
 
         #Math functions
         ('SQR 4 + 5', 7),
@@ -423,6 +425,10 @@ if __name__ == "__main__":
     print("\n" + "=" * 60)
     print("Evaluando expresiones con variables:")
     print("=" * 60)
+
+    # interpreter.evaluate('"a" = "b"')
+    # import sys
+    # sys.exit()
 
     for expr, expected_result in test_cases:
         try:
