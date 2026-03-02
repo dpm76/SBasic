@@ -3,6 +3,7 @@ from FunctionDefinition import FunctionDefinition
 from ValueType import ValueType
 from re import split as re_split
 from random import seed
+from time import sleep
 
 class BasicInterpreter:
     def __init__(self):
@@ -122,6 +123,12 @@ class BasicInterpreter:
         elif code_upper.startswith("DEF"):
             self.execute_def(code)
 
+        elif code_upper.startswith("CLS"):
+            self.execute_cls(code)
+
+        elif code_upper.startswith("WAIT"):
+            self.execute_wait(code)
+
         else:
             raise RuntimeError(f"Unknown keyword: {code}")
 
@@ -138,12 +145,12 @@ class BasicInterpreter:
             if arg != "":
                 value = self._expr_interpreter.evaluate(arg)
                 if isinstance(value, (float, int)):
-                    print(f"{value:g}", end="")
+                    print(f"{value:g}", end="", flush=True)
                 else:
-                    print(value, end="")
+                    print(value, end="", flush=True)
 
         if not code.endswith(";"):
-            print()
+            print(flush=True)
 
     def execute_goto(self, code):
         # GO TO 10
@@ -284,4 +291,14 @@ class BasicInterpreter:
         
         definition = FunctionDefinition(return_type, params, body.strip())
         self._functions[name] = definition
+
+    def execute_cls(self, code):
+        print("\x1b[2J\x1b[H")
+
+    def execute_wait(self, code):
+        _, param = code.split(" ", 1)
+        seconds = self._expr_interpreter.evaluate(param.strip())
+        if not isinstance(seconds, (float, int)):
+            raise ValueError("WAIT: Number expected as parameter")
+        sleep(seconds)
         

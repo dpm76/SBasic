@@ -27,33 +27,35 @@ class ExpressionInterpreter:
         self._functions = functions if functions is not None else {}
         
         self._register_operators((
-            _Operator('RND', 6, 0, lambda: random()),
-            _Operator('PI', 6, 0, lambda: pi),
-            _Operator('FN', 6, 2, lambda n, p: self._functions[n].resolve(self, p)),
-            _Operator('NEG', 5, 1, lambda a: -a),
-            _Operator('SQR', 5, 1, lambda a: sqrt(a)),
-            _Operator('COS', 5, 1, lambda a: cos(a)),
-            _Operator('SIN', 5, 1, lambda a: sin(a)),
-            _Operator('TAN', 5, 1, lambda a: tan(a)),
-            _Operator('ACS', 5, 1, lambda a: acos(a)),
-            _Operator('ASN', 5, 1, lambda a: asin(a)),
-            _Operator('ATN', 5, 1, lambda a: atan(a)),
-            _Operator('LN', 5, 1, lambda a: log(a)),
-            _Operator('EXP', 5, 1, lambda a: exp(a)),
-            _Operator('INT', 5, 1, lambda a: floor(a)),
-            _Operator('ABS', 5, 1, lambda a: abs(a)),
-            _Operator('STR$', 5, 1, lambda a: str(f"{a:g}") if isinstance(a, (int, float)) else (_ for _ in ()).throw(ValueError(f"'{a}' is not a number"))),
-            _Operator('LEN', 5, 1, lambda a: len(a) if isinstance(a, str) else (_ for _ in ()).throw(ValueError(f"{a} is not a string"))),
-            _Operator('SGN', 5, 1, lambda a: -1 if a < 0 else 1 if a > 0 else 0),
-            _Operator('VAL', 5, 1, lambda a: self.evaluate(a)),
-            _Operator('^', 4, 2, lambda a, b: a ** b),
-            _Operator('*', 4, 2, lambda a, b: a * b),
-            _Operator('/', 4, 2, lambda a, b: a / b if b != 0 else (_ for _ in ()).throw(ValueError("Zero division"))),
-            _Operator('+', 3, 2, lambda a, b: a + b),
-            _Operator('-', 3, 2, lambda a, b: a - b),
-            _Operator('TO', 2, 3, lambda s, a, b: s[a-1:b] if isinstance(s, str) else (_ for _ in()).throw(ValueError(f"{s} is not a string"))),
-            _Operator('START_TO', 2, 2, lambda s, b: s[:b] if isinstance(s, str) else (_ for _ in()).throw(ValueError(f"{s} is not a string"))),
-            _Operator('TO_END', 2, 2, lambda s, a: s[a-1:] if isinstance(s, str) else (_ for _ in()).throw(ValueError(f"{s} is not a string"))),
+            _Operator('RND', 7, 0, lambda: random()),
+            _Operator('PI', 7, 0, lambda: pi),
+            _Operator('FN', 7, 2, lambda n, p: self._functions[n].resolve(self, p)),
+            _Operator('NEG', 6, 1, lambda a: -a),
+            _Operator('SQR', 6, 1, lambda a: sqrt(a)),
+            _Operator('COS', 6, 1, lambda a: cos(a)),
+            _Operator('SIN', 6, 1, lambda a: sin(a)),
+            _Operator('TAN', 6, 1, lambda a: tan(a)),
+            _Operator('ACS', 6, 1, lambda a: acos(a)),
+            _Operator('ASN', 6, 1, lambda a: asin(a)),
+            _Operator('ATN', 6, 1, lambda a: atan(a)),
+            _Operator('LN', 6, 1, lambda a: log(a)),
+            _Operator('EXP', 6, 1, lambda a: exp(a)),
+            _Operator('INT', 6, 1, lambda a: floor(a)),
+            _Operator('ABS', 6, 1, lambda a: abs(a)),
+            _Operator('STR$', 6, 1, lambda a: str(f"{a:g}") if isinstance(a, (int, float)) else (_ for _ in ()).throw(ValueError(f"'{a}' is not a number"))),
+            _Operator('LEN', 6, 1, lambda a: len(a) if isinstance(a, str) else (_ for _ in ()).throw(ValueError(f"{a} is not a string"))),
+            _Operator('SGN', 6, 1, lambda a: -1 if a < 0 else 1 if a > 0 else 0),
+            _Operator('VAL', 6, 1, lambda a: self.evaluate(a)),
+            _Operator('^', 5, 2, lambda a, b: a ** b),
+            _Operator('*', 5, 2, lambda a, b: a * b),
+            _Operator('/', 5, 2, lambda a, b: a / b if b != 0 else (_ for _ in ()).throw(ValueError("Zero division"))),
+            _Operator('+', 4, 2, lambda a, b: a + b),
+            _Operator('-', 4, 2, lambda a, b: a - b),
+            _Operator('AT', 3, 2, lambda f, c: f"\x1b[{f};{c}f"),
+            _Operator('TAB', 3, 1, lambda c: f"\x1b[{c}G"),
+            _Operator('TO', 3, 3, lambda s, a, b: s[a-1:b] if isinstance(s, str) else (_ for _ in()).throw(ValueError(f"{s} is not a string"))),
+            _Operator('START_TO', 3, 2, lambda s, b: s[:b] if isinstance(s, str) else (_ for _ in()).throw(ValueError(f"{s} is not a string"))),
+            _Operator('TO_END', 3, 2, lambda s, a: s[a-1:] if isinstance(s, str) else (_ for _ in()).throw(ValueError(f"{s} is not a string"))),
             _Operator('>', 2, 2, lambda a, b: a > b),
             _Operator('<', 2, 2, lambda a, b: a < b),
             _Operator('=', 2, 2, lambda a, b: a == b),
@@ -150,6 +152,10 @@ class ExpressionInterpreter:
                 self._tokens.append(('PAREN_CLOSE', expr[self._expr_index]))
                 self._expr_index += 1
             
+            elif (expr[self._expr_index] == ',' 
+                and self._tokens[0][1] == 'AT'):
+                self._expr_index += 1
+
             else:
                 raise ValueError(f"Carácter inválido: {expr[self._expr_index]}")
         
