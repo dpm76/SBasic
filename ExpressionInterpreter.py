@@ -111,12 +111,39 @@ class ExpressionInterpreter:
                 while j < len(expr) and (expr[j].isalnum() or expr[j] == '$'):
                     j += 1
                 var_name = expr[self._expr_index:j]
+
+                # Buscar índices
+                indices = None
+                while j < len(expr) and (expr[j] == " "):
+                    j += 1
+                if j < len(expr) and expr[j] == "(":
+                    start_indices = j + 1
+                    while j < len(expr) and expr[j] != ")":
+                        j += 1
+                    if j < len(expr) and expr[j] == ")":
+                        end_indices = j
+                    else:
+                        raise ValueError(f"Bad index for array '{var_name}'")
+
+                    tokens_temp = self._tokens
+                    self._tokens = []
+                    indices = [self.evaluate(index) for index in expr[start_indices:end_indices].split(",")]
+                    self._tokens = tokens_temp
+                    j += 1
                 
                 # Determinar si es variable de string o numérica
                 if var_name.endswith('$'):
                     if var_name not in self._string_vars:
                         raise ValueError(f"Variable de texto '{var_name}' no definida")
-                    self._tokens.append(('STRING', self._string_vars[var_name]))
+                    if not indices:
+                        self._tokens.append(('STRING', self._string_vars[var_name]))
+                    else:
+                        item = self._string_vars[var_name]
+                        for index in indices:
+                            item = item[index-1]
+                        if isinstance(item, list):
+                            item = "".join(item)
+                        self._tokens.append(('STRING', item))
                 else:
                     if var_name not in self._numeric_vars:
                         raise ValueError(f"Variable numérica '{var_name}' no definida")

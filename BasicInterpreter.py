@@ -1,7 +1,7 @@
 from ExpressionInterpreter import ExpressionInterpreter
 from FunctionDefinition import FunctionDefinition
 from ValueType import ValueType
-from re import split as re_split
+from re import split as re_split, search as re_search
 from random import seed
 from time import sleep
 
@@ -152,6 +152,9 @@ class BasicInterpreter:
         elif code_upper.startswith("FLASH"):
             self.execute_flash(code)
 
+        elif code_upper.startswith("DIM"):
+            self.execute_dim(code)
+
         else:
             raise RuntimeError(f"Unknown keyword: {code}")
 
@@ -188,12 +191,35 @@ class BasicInterpreter:
 
     def execute_let(self, code):
         _, rest = code.split(" ", 1)
-        var, expr = rest.split("=", 1)
+        left, expr = rest.split("=", 1)
 
-        var = var.strip()
+        left = left.strip()
         expr = expr.strip()
         
-        self._assignVariable(var, expr)
+        match = re_search(r'\((.*?)\)', left)
+
+        if match:
+            indices_row = match.group(1)
+            indices = [self._expr_interpreter.evaluate(index_row) for index_row in indices_row.strip().split(",")]
+            var_name, _ = left.split("(", 1)
+            item = self._str_variables[var_name.strip()]
+
+            is_terminal = False
+            for index in indices:
+                temp = item[index-1]
+                if isinstance(temp, list):
+                    item = temp
+                else:
+                    is_terminal = True
+
+            if is_terminal:
+                item[indices[-1]-1] = self._expr_interpreter.evaluate(expr)
+            else:
+                for i, c in enumerate(self._expr_interpreter.evaluate(expr)):
+                    item[i] = c
+
+        else:
+            self._assignVariable(left, expr)
 
     def _assignVariable(self, var_name, expression_value):
         value = self._expr_interpreter.evaluate(expression_value)
@@ -353,3 +379,17 @@ class BasicInterpreter:
         value = self._expr_interpreter.evaluate(param.strip())
         print(f"\x1b[{5 if value == 1 else 25}m", end="")
         
+    def execute_dim(self, code):
+        _, param = code.split(" ", 1)
+        dim_name, dim_sizes_raw = param.split("(", 1)
+        dim_name = dim_name.strip()
+        dim_sizes = [self._expr_interpreter.evaluate(str_size) for str_size in dim_sizes_raw.strip()[:-1].split(",")]
+        if dim_name[-1] == "$":
+            self._str_variables[dim_name] = BasicInterpreter.create_multi_array(dim_sizes)
+
+    @staticmethod
+    def create_multi_array(sizes):
+        if len(sizes) == 1:
+            return [0] * sizes[0]
+        else:
+            return [BasicInterpreter.create_multi_array(sizes[1:]) for _ in range(sizes[0])]
