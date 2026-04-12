@@ -125,11 +125,14 @@ class ExpressionInterpreter:
                     else:
                         raise ValueError(f"Bad index for array '{var_name}'")
 
-                    tokens_temp = self._tokens
-                    self._tokens = []
-                    indices = [self.evaluate(index) for index in expr[start_indices:end_indices].split(",")]
-                    self._tokens = tokens_temp
-                    j += 1
+                    if not "TO" in expr[start_indices:end_indices]:
+                        tokens_temp = self._tokens
+                        self._tokens = []
+                        indices = [self.evaluate(index) for index in expr[start_indices:end_indices].split(",")]
+                        self._tokens = tokens_temp
+                        j += 1
+                    else:
+                        j = start_indices - 1
                 
                 # Determinar si es variable de string o numérica
                 if var_name.endswith('$'):
@@ -452,10 +455,6 @@ if __name__ == "__main__":
     print("\n" + "=" * 60)
     print("Evaluando expresiones con variables:")
     print("=" * 60)
-
-    # interpreter.evaluate('"a" = "b"')
-    # import sys
-    # sys.exit()
 
     for expr, expected_result in test_cases:
         try:
